@@ -1,6 +1,6 @@
 
-import {PublicKey} from '@solana/web3.js'
 import fetch from "node-fetch"
+import {tvl} from './functions'
 
 async function getKaminoLendingMarketsJson() {
   const response = await fetch(
@@ -9,7 +9,7 @@ async function getKaminoLendingMarketsJson() {
   return await response.json();
 }
 
-async function getKaminoLendingMarkets(): Promise<PublicKey[]> {
+async function getKaminoLendingMarkets(): Promise<string[]> {
   type KaminoLendingMarket = {
     lendingMarket: string;
     isPrimary: boolean;
@@ -20,9 +20,11 @@ async function getKaminoLendingMarkets(): Promise<PublicKey[]> {
   const lendingMarkets = await getKaminoLendingMarketsJson() as KaminoLendingMarket[]
 
   return lendingMarkets
-    .map((market: KaminoLendingMarket) => new PublicKey(market.lendingMarket));
+    .map((market: KaminoLendingMarket) => market.lendingMarket);
 }
 
 (async () => {
-  console.log(await getKaminoLendingMarketsJson())
+  const markets = await getKaminoLendingMarkets()
+  console.log(markets)
+  console.log('tvl:', await tvl(markets))
 })()
