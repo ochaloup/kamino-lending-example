@@ -1,0 +1,9 @@
+= Calls on Kamino lending program
+
+To run
+
+```
+npm install
+
+npm run start
+```

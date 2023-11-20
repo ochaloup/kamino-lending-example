@@ -1,6 +1,8 @@
 
 import fetch from "node-fetch"
-import {tvl} from './functions'
+import { loadLending } from "./lendingSdk";
+import { PublicKey } from "@solana/web3.js";
+import { BN } from "@coral-xyz/anchor";
 
 async function getKaminoLendingMarketsJson() {
   const response = await fetch(
@@ -25,6 +27,12 @@ async function getKaminoLendingMarkets(): Promise<string[]> {
 
 (async () => {
   const markets = await getKaminoLendingMarkets()
-  console.log(markets)
-  console.log('tvl:', await tvl(markets))
+  // console.log(markets)
+  // console.log('tvl:', await tvl(markets))
+
+  for (const market of markets) {
+    console.log('market', market)
+    const lending = await loadLending(new PublicKey(market))
+    console.log('lending', lending.reduce((a, b) => a.add(b.amount), new BN(0)).toString())
+  }
 })()

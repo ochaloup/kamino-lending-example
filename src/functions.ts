@@ -3,10 +3,10 @@
 import { Connection, GetProgramAccountsResponse, PublicKey, RpcResponseAndContext, TokenAccountBalancePair } from '@solana/web3.js';
 import { Program, Idl } from '@coral-xyz/anchor'
 import LendingIdl from "./lending_idl.json";
-import {Mint, getMint, TOKEN_PROGRAM_ID, getMultipleAccounts, unpackAccount} from '@solana/spl-token'
+import {Mint, getMint, TOKEN_PROGRAM_ID, unpackAccount} from '@solana/spl-token-3.x'
 import {sumTokens} from './defilama'
 
-const MSOL_MINT = 'mSoLzYCxHdYgdzU16g5QSh3i5K3z3KZK7ytfqcJm7So';
+export const MSOL_MINT = 'mSoLzYCxHdYgdzU16g5QSh3i5K3z3KZK7ytfqcJm7So';
 
 export function endpoint() {
   return process.env.RPC_URL ?? 'https://api.mainnet-beta.solana.com'
