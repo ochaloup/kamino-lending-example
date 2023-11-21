@@ -1,6 +1,6 @@
 
 import fetch from "node-fetch"
-import { loadLending } from "./lendingSdk";
+import { loadLendingMarkets } from "./lendingSdk";
 import { PublicKey } from "@solana/web3.js";
 import { BN } from "@coral-xyz/anchor";
 
@@ -30,9 +30,6 @@ async function getKaminoLendingMarkets(): Promise<string[]> {
   // console.log(markets)
   // console.log('tvl:', await tvl(markets))
 
-  for (const market of markets) {
-    console.log('market', market)
-    const lending = await loadLending(new PublicKey(market))
-    console.log('lending', lending.reduce((a, b) => a.add(b.amount), new BN(0)).toString())
-  }
+  const lending = await loadLendingMarkets(markets.map((market) => new PublicKey(market)))
+  console.log('lending', lending.reduce((a, b) => a.add(b.amount), new BN(0)).toString())
 })()
