@@ -84,14 +84,15 @@ export async function loadLending(market: PublicKey): Promise<{owner: PublicKey,
         const ownerToMsol = ownerToCollateral.map(({owner, amount}) => {
             return {
                 owner: owner,
-                amount: amount.mul(reserve.state.liquidity.availableAmount)
-                    .div(new BN(reserve.stats.totalSupply.ceil().toString()))
+                // amount is denominated in the mSOLs, no other calculation is needed here
+                amount
                 // amount: amount
                 //     .mul(reserve.state.liquidity.availableAmount)
                 //     .div(reserve.state.collateral.mintTotalSupply),
             }
         })
         owners.push(...ownerToMsol)
+        // collateral in deposit is msol, i.e., both numbers down below should be the same
         console.log(
             'reserve',
             reserve.address.toBase58(),
