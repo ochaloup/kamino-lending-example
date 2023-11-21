@@ -1,4 +1,4 @@
-import { KaminoMarket } from "@hubbleprotocol/kamino-lending-sdk";
+import { KaminoMarket, KaminoReserve } from "@hubbleprotocol/kamino-lending-sdk";
 import {MSOL_MINT, getConnection} from './functions'
 import { PublicKey } from "@solana/web3.js";
 import { BN } from "@coral-xyz/anchor";
@@ -26,13 +26,28 @@ export async function loadLending(market: PublicKey): Promise<{owner: PublicKey,
     await marketData.loadReserves();
 
     // reserve.getTokenSymbol() === "MSOL"
-    const msolReserves = marketData.reserves.filter((reserve) => reserve.state.liquidity.mintPubkey.toBase58() == MSOL_MINT);
+    const msolReserves: KaminoReserve[] = marketData.reserves.filter((reserve) => reserve.state.liquidity.mintPubkey.toBase58() == MSOL_MINT);
     console.log('loan to value pct', msolReserves.map((reserve) => {return { addr: reserve.address.toBase58(), loanPct: reserve.state.config.loanToValuePct, symbol: reserve.getTokenSymbol() }}));
     console.log(
-        'collateral           ',
-        msolReserves.map((reserve) => reserve.state.collateral.mintTotalSupply.toString()),
-        'msol supplies',
-        msolReserves.map((reserve) => reserve.state.liquidity.availableAmount.toString()),
+        'Kamino Lending reserves',
+        msolReserves.map((reserve) => {
+          return {
+            address: reserve.address.toBase58(),
+            token: reserve.getTokenSymbol(),
+            collateralMintTotalSupply: reserve.state.collateral.mintTotalSupply.toString(),
+            liquidityAvailableAmount: reserve.state.liquidity.availableAmount.toString(),
+            getTotalSupply: reserve.getTotalSupply().toString(),
+          };
+        }),
+        'stats',
+        msolReserves.map((reserve) => {
+            return {
+                totalLiquidity: reserve.stats.totalLiquidity,
+                totalSupply: reserve.stats.totalSupply,
+                mintTotalSupply: reserve.stats.mintTotalSupply,
+                totalBorrows: reserve.stats.totalBorrows
+            }
+        }),
     );
 
     const obligations = await marketData.getAllObligationsForMarket()
@@ -55,7 +70,7 @@ export async function loadLending(market: PublicKey): Promise<{owner: PublicKey,
                 )
                 .map((deposit) => deposit.depositedAmount)
                 .reduce((a, b) => a.add(b), new BN(0))
-            if (Math.random() < 0.25 && msolDepositAmount.gtn(0)) {
+            if (Math.random() < 0.05 && msolDepositAmount.gtn(0)) {
                 // logging purposes to get some obligation addresses
                 console.log('obligation', obligation.obligationAddress.toBase58(), 'msol deposit', msolDepositAmount.toString())
             }
@@ -66,7 +81,11 @@ export async function loadLending(market: PublicKey): Promise<{owner: PublicKey,
         const ownerToMsol = ownerToCollateral.map(({owner, amount}) => {
             return {
                 owner: owner,
-                amount: amount.mul(reserve.state.liquidity.availableAmount).div(reserve.state.collateral.mintTotalSupply)
+                amount: amount.mul(reserve.state.liquidity.availableAmount)
+                    .div(new BN(reserve.stats.totalSupply.ceil().toString()))
+                // amount: amount
+                //     .mul(reserve.state.liquidity.availableAmount)
+                //     .div(reserve.state.collateral.mintTotalSupply),
             }
         })
         owners.push(...ownerToMsol)
