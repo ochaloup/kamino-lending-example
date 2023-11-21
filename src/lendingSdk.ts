@@ -64,17 +64,20 @@ export async function loadLending(market: PublicKey): Promise<{owner: PublicKey,
     const owners: {owner: PublicKey, amount: BN}[] = []
     for (const reserve of msolReserves) {
         const ownerToCollateral = obligations.map((obligation) => {
-            const msolDepositAmount: BN =
+            const obligationDepositAmount: BN =
                 obligation.state.deposits.filter(
                     (deposit) => reserve.address.equals(deposit.depositReserve)
                 )
                 .map((deposit) => deposit.depositedAmount)
                 .reduce((a, b) => a.add(b), new BN(0))
-            if (Math.random() < 0.05 && msolDepositAmount.gtn(0)) {
+            if (Math.random() < 0.05 && obligationDepositAmount.gtn(0)) {
                 // logging purposes to get some obligation addresses
-                console.log('obligation', obligation.obligationAddress.toBase58(), 'msol deposit', msolDepositAmount.toString())
+                console.log(
+                    'obligation', obligation.obligationAddress.toBase58(),
+                    'obligation deposit', obligationDepositAmount.toString()
+                )
             }
-            return {owner: obligation.state.owner, amount: msolDepositAmount}
+            return {owner: obligation.state.owner, amount: obligationDepositAmount}
         })
         .filter(({amount}) => amount.gt(new BN(0)))
 
@@ -90,6 +93,8 @@ export async function loadLending(market: PublicKey): Promise<{owner: PublicKey,
         })
         owners.push(...ownerToMsol)
         console.log(
+            'reserve',
+            reserve.address.toBase58(),
             'sum owner to collateral',
             ownerToCollateral.reduce((a, b) => a.add(b.amount), new BN(0)).toString(),
             'sum owner to msol',
