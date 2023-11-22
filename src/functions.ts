@@ -7,6 +7,16 @@ import {Mint, getMint, TOKEN_PROGRAM_ID, unpackAccount} from '@solana/spl-token-
 import {sumTokens} from './defilama'
 
 export const MSOL_MINT = 'mSoLzYCxHdYgdzU16g5QSh3i5K3z3KZK7ytfqcJm7So';
+export const LENDING_PROGRAM_ID = new PublicKey('KLend2g3cP87fffoy8q1mQqGKjrxjC8boSyAYavgmjD');
+export const LENDING_MARKET_AUTH_SEED = 'lma';
+
+export function lendingMarketAuthority(market: PublicKey, programId: PublicKey = LENDING_PROGRAM_ID) {
+  const [authority] = PublicKey.findProgramAddressSync(
+  [Buffer.from(LENDING_MARKET_AUTH_SEED), new PublicKey(market).toBuffer()],
+  programId
+  )
+  return authority
+}
 
 export function endpoint() {
   return process.env.RPC_URL ?? 'https://api.mainnet-beta.solana.com'
@@ -33,12 +43,10 @@ export async function getTokenOwnersByMint(mint: PublicKey, connection: Connecti
 
 export async function tvl(markets: string[]) {
   const connection = getConnection();
-  const programId = new PublicKey('KLend2g3cP87fffoy8q1mQqGKjrxjC8boSyAYavgmjD');
-  const lendingMarketAuthSeed = 'lma';
   const tokensAndOwners: [PublicKey, PublicKey][] = [];
   const ktokens: Record<string, boolean> = {};
 
-  const kaminoLendProgram = new Program(LendingIdl as Idl, programId, { connection, publicKey: PublicKey.unique() });
+  const kaminoLendProgram = new Program(LendingIdl as Idl, LENDING_PROGRAM_ID, { connection, publicKey: PublicKey.unique() });
   for (const market of markets) {
     const reserves = await kaminoLendProgram.account.reserve.all([
       { dataSize: 8624 },
@@ -56,10 +64,7 @@ export async function tvl(markets: string[]) {
         ktokens[reserve.liquidity.mintPubkey] = true;
       } else {
         ktokens[reserve.liquidity.mintPubkey] = false;
-        const [authority] = PublicKey.findProgramAddressSync(
-          [Buffer.from(lendingMarketAuthSeed), new PublicKey(market).toBuffer()],
-          programId
-        );
+        const authority = lendingMarketAuthority(new PublicKey(market));
         tokensAndOwners.push([reserve.liquidity.mintPubkey, authority]);
       }
     }
