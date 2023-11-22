@@ -3,6 +3,7 @@ import {MSOL_MINT, getConnection} from './functions'
 import { PublicKey } from "@solana/web3.js";
 import { BN } from "@coral-xyz/anchor";
 
+
 export async function loadLendingMarkets(markets: PublicKey[]): Promise<{owner: PublicKey, amount: BN}[]> {
     return (await Promise.all(markets.map(async (market) => loadLending(market))))
         .flat()
@@ -63,17 +64,17 @@ export async function loadLending(market: PublicKey): Promise<{owner: PublicKey,
 
     const owners: {owner: PublicKey, amount: BN}[] = []
     for (const reserve of msolReserves) {
-        const ownerToCollateral = obligations.map((obligation) => {
+        const ownerToObligationDeposits = obligations.map((obligation) => {
             const obligationDepositAmount: BN =
                 obligation.state.deposits.filter(
                     (deposit) => reserve.address.equals(deposit.depositReserve)
                 )
                 .map((deposit) => deposit.depositedAmount)
                 .reduce((a, b) => a.add(b), new BN(0))
-            if (Math.random() < 0.05 && obligationDepositAmount.gtn(0)) {
+            if (Math.random() < 0.01 && obligationDepositAmount.gtn(0)) {
                 // logging purposes to get some obligation addresses
                 console.log(
-                    'obligation', obligation.obligationAddress.toBase58(),
+                    ' - obligation example:', obligation.obligationAddress.toBase58(),
                     'obligation deposit', obligationDepositAmount.toString()
                 )
             }
@@ -81,14 +82,14 @@ export async function loadLending(market: PublicKey): Promise<{owner: PublicKey,
         })
         .filter(({amount}) => amount.gt(new BN(0)))
 
-        const ownerToMsol = ownerToCollateral.map(({owner, amount}) => {
+        const ownerToMsol = ownerToObligationDeposits.map(({owner, amount}) => {
             return {
                 owner: owner,
                 // amount is denominated in the mSOLs, no other calculation is needed here
-                amount
-                // amount: amount
-                //     .mul(reserve.state.liquidity.availableAmount)
-                //     .div(reserve.state.collateral.mintTotalSupply),
+                amount,
+                amountCollateral: amount
+                    .mul(reserve.state.liquidity.availableAmount)
+                    .div(reserve.state.collateral.mintTotalSupply),
             }
         })
         owners.push(...ownerToMsol)
@@ -97,7 +98,7 @@ export async function loadLending(market: PublicKey): Promise<{owner: PublicKey,
             'reserve',
             reserve.address.toBase58(),
             'sum owner to collateral',
-            ownerToCollateral.reduce((a, b) => a.add(b.amount), new BN(0)).toString(),
+            ownerToMsol.reduce((a, b) => a.add(b.amountCollateral), new BN(0)).toString(),
             'sum owner to msol',
             ownerToMsol.reduce((a, b) => a.add(b.amount), new BN(0)).toString(),
         )

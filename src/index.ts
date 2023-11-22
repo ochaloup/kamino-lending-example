@@ -40,8 +40,8 @@ export async function loadKaminoReserve(reservePubkey: PublicKey, connection: Co
 
 (async () => {
   const connection = getConnection()
+  const markets = await getKaminoLendingMarkets()
 
-  // const markets = await getKaminoLendingMarkets()
   // console.log(markets)
   // console.log('tvl:', await tvl(markets))
   // for (const market of markets) {
@@ -53,5 +53,6 @@ export async function loadKaminoReserve(reservePubkey: PublicKey, connection: Co
   // }
 
   const lending = await loadLendingMarkets(markets.map((market) => new PublicKey(market)))
-  console.log('lending', lending.reduce((a, b) => a.add(b.amount), new BN(0)).toString())
+  console.log("First lending owner", lending[0].owner.toBase58(), lending[0].amount.toString());
+  console.log('Main output:', lending.reduce((a, b) => a.add(b.amount), new BN(0)).toString())
 })()
