@@ -1,4 +1,4 @@
-import { KaminoMarket, KaminoReserve } from "@hubbleprotocol/kamino-lending-sdk";
+import { KaminoMarket, KaminoReserve, DepositObligationCollateralAccounts } from "@hubbleprotocol/kamino-lending-sdk";
 import {MSOL_MINT, getConnection} from './functions'
 import { PublicKey } from "@solana/web3.js";
 import { BN } from "@coral-xyz/anchor";
@@ -66,11 +66,17 @@ export async function loadLending(market: PublicKey): Promise<{owner: PublicKey,
     for (const reserve of msolReserves) {
         const ownerToObligationDeposits = obligations.map((obligation) => {
             const obligationDepositAmount: BN =
-                obligation.state.deposits.filter(
-                    (deposit) => reserve.address.equals(deposit.depositReserve)
+                // OLD WRONG(?) approach
+                // obligation.state.deposits.filter(
+                //     (deposit) => reserve.address.equals(deposit.depositReserve)
+                // )
+                // NEW APPROACH recommended by Andrei Hrs from Kamino team
+                // while stats hold the processed data, which we transform back into base tokens (msol in this case). so it makes sense you got that result initially
+                obligation.deposits.filter(
+                    (deposit) => deposit.mintAddress === MSOL_MINT
                 )
-                .map((deposit) => deposit.depositedAmount)
-                .reduce((a, b) => a.add(b), new BN(0))
+                .map((deposit) => deposit.amount)
+                .reduce((a, b) => a.add(new BN(b.toString())), new BN(0))
             if (Math.random() < 0.01 && obligationDepositAmount.gtn(0)) {
                 // logging purposes to get some obligation addresses
                 console.log(
@@ -85,11 +91,11 @@ export async function loadLending(market: PublicKey): Promise<{owner: PublicKey,
         const ownerToMsol = ownerToObligationDeposits.map(({owner, amount}) => {
             return {
                 owner: owner,
-                // amount is denominated in the mSOLs, no other calculation is needed here
+                // amount is denominated in the mSOLs, no other calculation is needed here when using `obligation.deposits for filtering`
                 amount,
-                amountCollateral: amount
-                    .mul(reserve.state.liquidity.availableAmount)
-                    .div(reserve.state.collateral.mintTotalSupply),
+                // amountCollateral: amount
+                //     .mul(reserve.state.liquidity.availableAmount)
+                //     .div(reserve.state.collateral.mintTotalSupply),
             }
         })
         owners.push(...ownerToMsol)
@@ -97,8 +103,8 @@ export async function loadLending(market: PublicKey): Promise<{owner: PublicKey,
         console.log(
             'reserve',
             reserve.address.toBase58(),
-            'sum owner to collateral',
-            ownerToMsol.reduce((a, b) => a.add(b.amountCollateral), new BN(0)).toString(),
+            // 'sum owner to collateral',
+            // ownerToMsol.reduce((a, b) => a.add(b.amountCollateral), new BN(0)).toString(),
             'sum owner to msol',
             ownerToMsol.reduce((a, b) => a.add(b.amount), new BN(0)).toString(),
         )
